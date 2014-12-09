@@ -1,9 +1,10 @@
 package com.mrjaffesclass.apcs.mvc.template;
 
 import com.mrjaffesclass.apcs.messenger.*;
-
+import java.util.Random;
+import java.awt.Dimension;
 /**
- * The model represents the data that the app uses.
+ * The model represents the data use.
  * @author Roger Jaffe
  * @version 1.0
  */
@@ -11,10 +12,7 @@ public class Model implements MessageHandler {
 
   // Messaging system for the MVC
   private final Messenger mvcMessaging;
-
-  // Model's data variables
-  private int variable1;
-  private int variable2;
+  private boolean [][] gameMap = new boolean[8][8];
 
   /**
    * Model constructor: Create the data representation of the program
@@ -22,6 +20,9 @@ public class Model implements MessageHandler {
    *   local messages between Model, View, and controller
    */
   public Model(Messenger messages) {
+      /**
+       * Sets the variables.
+       */
     mvcMessaging = messages;
   }
   
@@ -29,75 +30,57 @@ public class Model implements MessageHandler {
    * Initialize the model here and subscribe to any required messages
    */
   public void init() {
-    mvcMessaging.subscribe("view:changeButton", this);
-    setVariable1(10);
-    setVariable2(-10);
+      mvcMessaging.subscribe("Square:position", this);
+      mvcMessaging.subscribe("GameOver:Reset",this);
+      generateGameMap();
   }
-  
-  @Override
-  public void messageHandler(String messageName, Object messagePayload) {
-    if (messagePayload != null) {
-      System.out.println("MSG: received by model: "+messageName+" | "+messagePayload.toString());
-    } else {
-      System.out.println("MSG: received by model: "+messageName+" | No data sent");
-    }
-    MessagePayload payload = (MessagePayload)messagePayload;
-    int field = payload.getField();
-    int direction = payload.getDirection();
+  public void generateGameMap(){
+      /**
+       * places mines in random places.
+       * @return random places
+       **/
+      for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                    gameMap[x][y] = false;
+            }
+        }
+        
+        int count = 0;
+        while (count < 10) {
+            int rand1 = (int) (Math.random() * 8);
+            int rand2 = (int) (Math.random() * 8);
+            if (!gameMap[rand1][rand2]) {
+                gameMap[rand1][rand2] = true;
+                count++;
+            }
+
+        }
     
-    if (direction == Constants.UP) {
-      if (field == 1) {
-        setVariable1(getVariable1()+Constants.FIELD_1_INCREMENT);
-      } else {
-        setVariable2(getVariable2()+Constants.FIELD_2_INCREMENT);
-      }
-    } else {
-      if (field == 1) {
-        setVariable1(getVariable1()-Constants.FIELD_1_INCREMENT);
-      } else {
-        setVariable2(getVariable2()-Constants.FIELD_2_INCREMENT);
-      }      
+  }
+
+    private void checkGameMap(Dimension dimension) {
+        if (gameMap[(int) dimension.width][(int) dimension.height]) {
+            mvcMessaging.notify("Model:LoseALife");
+
+        } else {
+            mvcMessaging.notify("Model:ScoreAPoint");
+
+        }
     }
-  }
 
-  /**
-   * Getter function for variable 1
-   * @return Value of variable1
-   */
-  public int getVariable1() {
-    return variable1;
-  }
+    private void resetBoard() {
+        generateGameMap();
+    }
+    
 
-  /**
-   * Setter function for variable 1
-   * @param v New value of variable1
-   */
-  public void setVariable1(int v) {
-    variable1 = v;
-    // When we set a new value to variable 1 we need to also send a
-    // message to let other modules know that the variable value
-    // was changed
-    mvcMessaging.notify("model:variable1Changed", variable1, true);
-  }
-  
-  /**
-   * Getter function for variable 1
-   * @return Value of variable2
-   */
-  public int getVariable2() {
-    return variable2;
-  }
-  
-  /**
-   * Setter function for variable 2
-   * @param v New value of variable 2
-   */
-  public void setVariable2(int v) {
-    variable2 = v;
-    // When we set a new value to variable 2 we need to also send a
-    // message to let other modules know that the variable value
-    // was changed
-    mvcMessaging.notify("model:variable2Changed", variable2, true);
-  }
-
+    @Override
+    public void messageHandler(String messageName, Object messagePayload) {
+        switch (messageName) {
+            case "Square:position":
+                checkGameMap((Dimension) messagePayload);
+                break;
+                 case "GameOver:Reset": resetBoard();break;
+        }
+    }
 }
+    
